@@ -1,0 +1,17 @@
+
+.description {
+
+ /* font-family:"Courier New", Courier, monospace*/
+ font-family: 'Source Sans Pro', sans-serif;
+ /* color: #fff;*/
+  font-size: 17px;
+ 
+
+
+}
+
+.description em {
+  /*color: #ffa500;*/
+  font-style: normal;
+  font-family:"Courier New", Courier, monospace
+}

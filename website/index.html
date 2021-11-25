@@ -1,0 +1,264 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <link rel="stylesheet" type="text/css" href="styles.css"> 
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2017</h1>
+<h1 align="middle">Project 2: Mesh Editor</h1>
+<h2 align="middle">Max Tang</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>Give a high-level overview of what you implemented in this project. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the project.</p>
+
+<h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+
+<h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
+
+<p class="description"><span style=" font-weight: bold;">Algorithm:</span><br><em>De Casteljau's algorithm</em> is a recursive method to evaluate polynomials in Bézier curves. Given control points <em>points</em> and the parameter <em>t</em>, we can use linear interpolation to compute the <em>n-1</em> intermediate control points at the parameter <em>t</em> in the next subdivision level. Iterate through the control points, using lerp function <em>pi = (1-t)*points[i] + t*points[1+i]</em> to compute the intermediate point, and push <em>pi</em> into <em>res</em>. Finally return <em>res</em>, we can get the points for next step.<br><br>
+
+Below are screenshots for part1:</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/t1_s0.png" align="middle" width="400px"/>
+        <figcaption align="middle">Points at level 0</figcaption>
+      </td>
+      <td>
+        <img src="images/t1_s1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Points at level 1</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <td>
+        <img src="images/t1_s2.png" align="middle" width="400px"/>
+        <figcaption align="middle">Points at level 2</figcaption>
+      </td>
+      <td>
+        <img src="images/t1_s3.png" align="middle" width="400px"/>
+        <figcaption align="middle">Points at level 3</figcaption>
+      </td>
+    </tr>
+      <tr>
+      <td>
+        <img src="images/t1_s4.png" align="middle" width="400px"/>
+        <figcaption align="middle">Points at level 4</figcaption>
+      </td>
+          <td>
+        <img src="images/t1_s5.png" align="middle" width="400px"/>
+        <figcaption align="middle">Points at level 5</figcaption>
+      </td>
+    </tr>
+        </tr>
+        <tr>
+
+      <td>
+        <img src="images/t1_last.png" align="middle" width="400px"/>
+        <figcaption align="middle">Modification</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+<h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
+<p class="description"><span style=" font-weight: bold;">Algorithm:</span><br>For this part we are given a 2D array, where <em>controlPoints[i]</em> is similar to the control points <em>points</em> from the previous part. Inside the function <em>evaluate</em>, for each row in <em>controlPoints</em>,  We can apply <em>de Casteljau's algorithm</em> for Bézier curve to compute <em>controlPoints[i]</em> using function <em>evaluate1D</em> with parameter <em>u</em>, then push the result point <em>n</em> into a vector <em>ns</em>. Then we apply <em>de Casteljau's algorithm</em> again using <em>evaluate1D</em> with parameter <em>v</em> on <em>ns</em>, and get the final point <em>res</em>, which is a point on the Bezier surface.<br>
+Inside the function <em>evaluate1D</em> we call <em>evaluateStep(points, t)</em>, if it gives us one point then simply return the point. If it gives us more than one points, that means we need to recursively interpolate the new points get from <em>evaluateStep</em>. And function <em>evaluateStep</em> is basically the same as <em>evaluateStep</em> in part 1.<br><br>
+
+Below are screenshots for part2:</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/t2.png" align="middle" width="400px"/>
+        <figcaption align="middle">Model of teapot.bez</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<h2 align="middle">Section II: Sampling</h2>
+
+<h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
+
+<p class="description"><span style=" font-weight: bold;">Algorithm:</span><br>In order to calculate the unit normal at certain vertex, we need to iterate through the faces around the vertex, and the weighted sum of normal vector of each face is the result. Inside the function <em>Vector3D Vertex::normal</em>, we iterate through the neighbor faces starting from a halfedge - <em>h = halfedge()</em>. To get the area of a face we only need to get the position of each vertex on the face. Therefore, inside the for loop we get <em>v0</em>, <em>v1</em>, <em>v2</em> for each face. And the variables <em>vab</em>, <em>vac</em> are two vectors where <em>vac = v1 – v0</em>, <em>vab = v2 – v0</em>. Then we can compute the area of a triangle using formula <em>area = (sqrt(pow((vab.y*vac.z-vab.z*vac.y),2)+pow((vab.z*vac.x-vab.x*vac.z),2)+pow((vab.x*vac.y-vab.y*vac.x),2)))/2</em>, and compute the normal vector of this face using cross product of <em>vac</em> and <em>vab</em>. Finally return the normalized weighted sum of normal vector of each face.<br><br>
+Below are screenshots for part3:</p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/t3_1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Model before press "Q"</figcaption>
+      </td>
+    </tr>
+        <tr>
+      <td>
+        <img src="images/t3_2.png" align="middle" width="400px"/>
+        <figcaption align="middle">Model after press "Q"</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+
+<h3 align="middle">Part 4: Half-edge flip</h3>
+<p class="description"><span style=" font-weight: bold;">Algorithm:</span><br>To flip the given mesh as the picture showed below (triangle <em>abc</em> and triangle <em>bcd</em>), I first get all the <em>HalfedgeIter</em> using the given parameter <em>e0</em>, and get all the vertex <em>a</em>, <em>b</em>, <em>c</em>, <em>d</em>. Then set new halfedge pointers each vertex, for example <em>a->halfedge() = bc</em>, <em>d->halfedge() = cb</em> etc. Next we need to set the pointer for each face: <em>f0->getFace()->halfedge() = dc</em>, <em>f1->getFace()->halfedge() = ab</em>. Finally set the neighbors for each edge, for example <em>ca->setNeighbors(bc, ac, c, ca->edge(), f0)</em>, <em>bc->setNeighbors(dc, cb, a, bc->edge())</em>, and then return the flipped edge <em>bc->edge()</em>.<br><br></p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/t4_00.png" align="middle" width="400px"/>
+        <figcaption align="middle">Example</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<p class="description"><span style=" font-weight: bold;">Debug:</span><br>
+It took me over two hours to debug on this part. The only thing I do is manually draw the step line by line. Eventually I found the biggest error was that I set the halfedges’ neighbors before I set the pointer to the faces, which caused one wrong pointer.
+<br><br></p>
+
+<p class="description">Below are screenshots for part4:<br><br></p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/t4_1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Model before edge flip</figcaption>
+      </td>
+    </tr>
+        <tr>
+      <td>
+        <img src="images/t4_2.png" align="middle" width="400px"/>
+        <figcaption align="middle">Model after edge flip</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<h3 align="middle">Part 5: Half-edge split</h3>
+
+<p class="description"><span style=" font-weight: bold;">Algorithm:</span><br>This part is very similar to the previous part. I follow the diagram below closely. Firstly, I accessed all the original <em>FaceIter</em>, <em>HalfedgeIter</em>, and the <em>VertexIter</em> using the given edge <em>e0</em>. Secondly, I created a new point <em>VertexIter m = newVertex()</em> to be return and set the position to <em>m->position = ((c->position)+(b->position))/2</em>. Then I create new faces <em>f2</em>, <em>f3</em> and new <em>halfedgeIter am</em>, <em>ma</em>, <em>bm</em>, <em>mb</em>, <em>dm</em>, <em>mb</em>. Thirdly I set the halfedge pointer for every point, for example <em>a->halfedge() = ab</em>, <em>b->halfedge() = bd</em>, <em>m->halfedge() = bc</em> ect. Then set the edge pointer for new edges <em>e1->halfedge() = am</em>, <em>e2->halfedge() = md</em>, <em>e3->halfedge() = mb</em>, and set the halfedge pointer to faces, for example <em>f1 -> halfedge() = dc</em>. Finally, set meighbors for all the haldedge for example <em>bc->setNeighbors(ca, cb, m, bc->edge(), f0)</em> and return <em>m</em>.<br><br></p>
+
+
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/t5_0.png" align="middle" width="400px"/>
+        <figcaption align="middle">Example</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<p class="description">Below are screenshots for part5:<br><br></p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/t5_1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Model before edge split</figcaption>
+      </td>
+    </tr>
+      <tr>
+      <td>
+        <img src="images/t5_2.png" align="middle" width="400px"/>
+        <figcaption align="middle">Model after edge split</figcaption>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <img src="images/t5_3.png" align="middle" width="400px"/>
+        <figcaption align="middle">Combination</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
+
+<p class="description"><span style=" font-weight: bold;">Algorithm:</span><br>
+For this part I follow the steps from spec:<br>
+Step A: Pre-compute the updated positions of both new and old vertices using the original, coarse mesh.<br>
+Step B: Subdivide the original mesh via edge splits and edge flips as described.<br>
+Step C: Update all vertex positions in the subdivided mesh using the pre-compute values from Step A.
+<br><br>
+For step A, to calculate the new position for new points, I iterated through the edges, and inside the for loop we can access neighbor points’ position <em>a_pos</em>, <em>b_pos</em>, <em>c_pos</em>, <em>d_pos</em>. Then set new position to the new edge <em>e->newPosition = ((float)3/(float)8)*(a_pos+b_pos) + ((float)1/(float)8)*(c_pos + d_pos)</em>. Secondly, to calculate the new position to old points, I iterate through all the vertices, and inside the loop we can have another loop to iterate through all neighbors of single point, then set the position to using <em>v->newPosition = (1-n*u) * (v->position) + u * nsum</em>.<br>
+For step B, I first iterate through all the edges and check if the edge is a new edge. If the edge is an old edge then we can do <em>VertexIter new_v = mesh.splitEdge(e)</em>, update the vertex’s position and set all new edges to new. Then push two new edges (the two edges to be flipped) to a vector <em>new_es</em>. Secondly iterate through the edge within <em>new_es</em> and check if it connected to a new vertex and an old vertex. If it does the flip this edge.<br>
+For step C, we simply iterate through the vertices and update their positions.<br><br>
+</p>
+
+<p class="description"><span style=" font-weight: bold;">Analysis:</span><br>When testing with the cube.dae (as the screenshots shows below), the initial sharp corners in the "Image1" remain “sharp” after subdivision as shown in "Image2". Since all the points are being pulled back at the same time, the corner vertex won’t fall to the same level as other vertices, though the process seems converging. 
+<br><br></p>
+
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="images/t6_1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Image1</figcaption>
+      </td>
+    </tr>
+        <tr>
+      <td>
+        <img src="images/t6_5.png" align="middle" width="400px"/>
+        <figcaption align="middle">Image2</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+
+<h2 align="middle">Section III: Shaders</h2>
+
+<h3 align="middle">Part 7: Fun with shaders</h3>
+
+
+
+<h2 align="middle">Section IV: Mesh Competition</h2>
+<p>If you are not participating in the optional mesh competition, don't worry about this section!</p>
+
+<h3 align="middle">Part 8: Design your own mesh!</h3>
+
+</body>
+</html>
